@@ -1,3 +1,4 @@
 streamlit>=1.62,<2.0
 google-genai>=2.21,<3.0
+anthropic>=1.13,<2.0
 python-dotenv>=1.2,<2.0

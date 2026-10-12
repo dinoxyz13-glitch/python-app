@@ -26,3 +26,11 @@ if not os.getenv("GEMINI_API_KEY"):
     )
 else:
     st.success("Gemini API キーが読み込まれています。")
+
+if os.getenv("ANTHROPIC_API_KEY"):
+    st.success("Claude API キーが読み込まれています。")
+else:
+    st.info(
+        "ANTHROPIC_API_KEY は未設定です。ブログ記事執筆で Claude を使う場合は、"
+        "`.env` に `ANTHROPIC_API_KEY=あなたのAPIキー` を追記してください。"
+    )

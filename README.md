@@ -37,6 +37,12 @@ cp .env.example .env
 GEMINI_API_KEY=あなたのAPIキー
 ```
 
+ブログ記事執筆で Claude（Opus 5.5）も使う場合は、[Claude Console](https://console.anthropic.com) で API キーを取得し、`.env` に追記してください（従量課金）。
+
+```
+ANTHROPIC_API_KEY=あなたのAPIキー
+```
+
 `.env` は `.gitignore` で除外されているため、コミットされることはありません。
 **APIキーは絶対に公開リポジトリにコミットしないでください。**
 
@@ -62,6 +68,7 @@ Windows では `start_app.bat` をダブルクリックしても起動できま�
 
 - [Streamlit](https://streamlit.io/) — UI
 - [google-genai](https://pypi.org/project/google-genai/) — Gemini API クライアント
+- [anthropic](https://pypi.org/project/anthropic/) — Claude API クライアント
 - [python-dotenv](https://pypi.org/project/python-dotenv/) — `.env` 読み込み
 
 ## ライセンス
