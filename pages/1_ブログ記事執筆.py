@@ -13,6 +13,15 @@ with st.form("blog_form"):
     topic = st.text_input("テーマ", placeholder="例: リモートワークの生産性を上げる方法")
     keywords = st.text_input("キーワード（カンマ区切り、任意）", placeholder="例: 集中力, ツール, 習慣")
     tone = st.selectbox("トーン", ["カジュアル", "フォーマル", "専門的", "親しみやすい"])
+    col_age, col_gender = st.columns(2)
+    with col_age:
+        target_age = st.selectbox(
+            "読者の年代", ["20〜30代", "30〜40代", "40〜50代", "50〜60代", "60〜80代"]
+        )
+    with col_gender:
+        target_gender = st.selectbox(
+            "読者の性別", ["男性向け", "女性向け", "男性女性とも"], index=2
+        )
     length = st.selectbox(
         "文章量",
         [
@@ -35,8 +44,9 @@ if submitted:
 キーワード: {keywords if keywords.strip() else "指定なし"}
 トーン: {tone}
 文章量: {length}
+想定読者: {target_age}・{target_gender}
 
-見出し（H2/H3相当）を使い、読みやすい構成にしてください。導入・本文・まとめの流れで書いてください。"""
+見出し（H2/H3相当）を使い、読みやすい構成にしてください。想定読者の年代・性別に合わせて、関心を持ちやすい話題や具体例、言葉づかいを選んでください。導入・本文・まとめの流れで書いてください。"""
         with st.spinner("記事を生成中..."):
             try:
                 result, truncated = generate_text_with_status(prompt)
