@@ -3,6 +3,7 @@ import logging
 import streamlit as st
 
 from utils import claude_client, gemini_client
+from utils.error_messages import describe_error, error_detail
 
 logger = logging.getLogger(__name__)
 
@@ -61,9 +62,10 @@ if submitted:
                 st.session_state["blog_ai"] = ai_name
             except (RuntimeError, claude_client.ClaudeRefusalError) as e:
                 st.error(str(e))
-            except Exception:
+            except Exception as e:
                 logger.exception("ブログ記事の生成に失敗しました")
-                st.error("エラーが発生しました。しばらくしてから再度お試しください。")
+                st.error(f"{ai_name} で記事を生成できませんでした。{describe_error(e)}")
+                st.caption(f"エラーの詳細: {error_detail(e)}")
 
 if "blog_result" in st.session_state:
     st.markdown("### 生成結果")
