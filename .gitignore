@@ -5,3 +5,4 @@ __pycache__/
 venv/
 .agents/
 .claude/
+data/note_profile.json

@@ -27,22 +27,34 @@ def get_client() -> genai.Client:
     return genai.Client(api_key=api_key, http_options=types.HttpOptions(retry_options=retry))
 
 
-def generate_text_with_status(prompt: str, temperature: float = 0.7) -> tuple[str, bool]:
-    """生成した文章と、出力上限に達して途中で切れたかどうかを返す。"""
+def chat_with_status(messages: list[dict], temperature: float = 0.7) -> tuple[str, bool]:
+    """会話（{"role": "user" | "assistant", "content": 文章} のリスト）の続きを生成し、
+    生成した文章と、出力上限に達して途中で切れたかどうかを返す。"""
     client = get_client()
+    contents = [
+        types.Content(
+            role="user" if m["role"] == "user" else "model", parts=[types.Part(text=m["content"])]
+        )
+        for m in messages
+    ]
     config = {"temperature": temperature, "max_output_tokens": MAX_OUTPUT_TOKENS}
     try:
-        response = client.models.generate_content(model=MODEL_NAME, contents=prompt, config=config)
+        response = client.models.generate_content(model=MODEL_NAME, contents=contents, config=config)
     except errors.ClientError as e:
         # 上限値がモデルの許容範囲を超えている場合は、上限を指定せずにやり直す（モデルの初期値が使われる）
         if e.code != 400 or "maxoutputtokens" not in str(e).lower().replace("_", ""):
             raise
         del config["max_output_tokens"]
-        response = client.models.generate_content(model=MODEL_NAME, contents=prompt, config=config)
+        response = client.models.generate_content(model=MODEL_NAME, contents=contents, config=config)
     truncated = bool(response.candidates) and (
         response.candidates[0].finish_reason == types.FinishReason.MAX_TOKENS
     )
     return response.text or "", truncated
+
+
+def generate_text_with_status(prompt: str, temperature: float = 0.7) -> tuple[str, bool]:
+    """生成した文章と、出力上限に達して途中で切れたかどうかを返す。"""
+    return chat_with_status([{"role": "user", "content": prompt}], temperature)
 
 
 def generate_text(prompt: str, temperature: float = 0.7) -> str:

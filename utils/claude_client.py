@@ -27,8 +27,9 @@ def get_client() -> anthropic.Anthropic:
     return anthropic.Anthropic()
 
 
-def generate_text_with_status(prompt: str) -> tuple[str, bool]:
-    """生成した文章と、出力上限に達して途中で切れたかどうかを返す。"""
+def chat_with_status(messages: list[dict]) -> tuple[str, bool]:
+    """会話（{"role": "user" | "assistant", "content": 文章} のリスト）の続きを生成し、
+    生成した文章と、出力上限に達して途中で切れたかどうかを返す。"""
     client = get_client()
     with client.beta.messages.stream(
         model=MODEL_NAME,
@@ -36,10 +37,15 @@ def generate_text_with_status(prompt: str) -> tuple[str, bool]:
         output_config={"effort": "high"},
         betas=[FALLBACK_BETA],
         fallbacks="default",
-        messages=[{"role": "user", "content": prompt}],
+        messages=messages,
     ) as stream:
         message = stream.get_final_message()
     if message.stop_reason == "refusal":
         raise ClaudeRefusalError("Claude がこの内容の生成を断りました。")
     text = "".join(block.text for block in message.content if block.type == "text")
     return text, message.stop_reason == "max_tokens"
+
+
+def generate_text_with_status(prompt: str) -> tuple[str, bool]:
+    """生成した文章と、出力上限に達して途中で切れたかどうかを返す。"""
+    return chat_with_status([{"role": "user", "content": prompt}])
