@@ -23,7 +23,10 @@ def describe_error(e: Exception) -> str:
         if e.code == 429:
             return "Gemini API の利用回数の上限に達しました。少し時間をおいてから再度お試しください。"
         if e.code >= 500:
-            return "Gemini API が混み合っているか、一時的に不調です。少し時間をおいてから再度お試しください。"
+            return (
+                "Gemini API が混み合っているか、一時的に不調です（自動で数回やり直しましたが失敗しました）。"
+                "少し時間をおいてから再度お試しいただくか、「Claude」に切り替えてお試しください。"
+            )
 
     return "予期しないエラーが発生しました。"
 

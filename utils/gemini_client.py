@@ -20,7 +20,11 @@ def get_client() -> genai.Client:
         raise RuntimeError(
             "GEMINI_API_KEY が設定されていません。.env ファイルに設定してください。"
         )
-    return genai.Client(api_key=api_key)
+    # Gemini が混雑（503）などで一時的に失敗したときは、間隔をあけて自動で再試行する
+    retry = types.HttpRetryOptions(
+        attempts=4, initial_delay=2, max_delay=30, http_status_codes=[429, 500, 502, 503, 504]
+    )
+    return genai.Client(api_key=api_key, http_options=types.HttpOptions(retry_options=retry))
 
 
 def generate_text_with_status(prompt: str, temperature: float = 0.7) -> tuple[str, bool]:
