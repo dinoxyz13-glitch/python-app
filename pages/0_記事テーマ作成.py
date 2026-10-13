@@ -10,8 +10,10 @@ from utils.note_theme_prompt import PROFILE_FIELDS, build_prompt
 
 logger = logging.getLogger(__name__)
 
-# 「私のこと」の入力内容はこのPCだけに保存する（.gitignore で GitHub には上げない）
-PROFILE_PATH = Path(__file__).resolve().parent.parent / "data" / "note_profile.json"
+# 「私のこと」の入力内容と編集者とのやりとりは、このPCだけに保存する（.gitignore で GitHub には上げない）
+DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+PROFILE_PATH = DATA_DIR / "note_profile.json"
+CHAT_PATH = DATA_DIR / "note_theme_chat.json"
 
 MORE_IDEAS_REQUEST = "ピンとこないので、別の角度からもう7案出してください。"
 
@@ -30,6 +32,32 @@ def load_profile() -> dict:
 def save_profile(profile: dict) -> None:
     PROFILE_PATH.parent.mkdir(parents=True, exist_ok=True)
     PROFILE_PATH.write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def save_chat() -> None:
+    """アプリを再起動しても続きから再開できるよう、やりとりを保存する。"""
+    chat = {
+        "ai": st.session_state["theme_ai"],
+        "fallback": st.session_state.get("theme_fallback", False),
+        "messages": st.session_state["theme_messages"],
+    }
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    CHAT_PATH.write_text(json.dumps(chat, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def restore_chat() -> None:
+    """保存されたやりとりがあれば、画面に読み込む（このブラウザ画面でまだ始めていない場合だけ）。"""
+    if "theme_messages" in st.session_state:
+        return
+    try:
+        chat = json.loads(CHAT_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return
+    if chat.get("messages") and chat.get("ai") in ai_router.AI_NAMES:
+        st.session_state["theme_messages"] = chat["messages"]
+        st.session_state["theme_ai"] = chat["ai"]
+        st.session_state["theme_fallback"] = chat.get("fallback", False)
+        st.session_state["theme_notice"] = "前回のやりとりを復元しました。続きから入力できます。"
 
 
 def ask_ai(messages: list[dict]) -> bool:
@@ -56,7 +84,11 @@ def ask_ai(messages: list[dict]) -> bool:
     st.session_state["theme_messages"] = messages + [
         {"role": "assistant", "content": text, "truncated": truncated}
     ]
+    save_chat()
     return True
+
+
+restore_chat()
 
 
 saved = load_profile()
@@ -97,6 +129,7 @@ if messages:
     more = col_more.button("別の角度からもう7案", use_container_width=True)
     if col_reset.button("やりとりをリセット", use_container_width=True):
         del st.session_state["theme_messages"]
+        CHAT_PATH.unlink(missing_ok=True)
         st.rerun()
 
     reply = st.chat_input("質問への回答や、追加の依頼を入力（例: 3番のテーマのターゲットをもっと絞って）")
