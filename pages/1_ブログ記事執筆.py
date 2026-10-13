@@ -2,7 +2,7 @@ import logging
 
 import streamlit as st
 
-from utils import claude_client, gemini_client
+from utils import ai_router, claude_client
 from utils.error_messages import describe_error, error_detail
 
 logger = logging.getLogger(__name__)
@@ -10,13 +10,9 @@ logger = logging.getLogger(__name__)
 st.set_page_config(page_title="ブログ記事執筆", page_icon="📝", layout="wide")
 st.title("📝 ブログ記事執筆")
 
-AI_OPTIONS = {
-    "Gemini": gemini_client.generate_text_with_status,
-    "Claude（Opus 5.5）": claude_client.generate_text_with_status,
-}
-
 with st.form("blog_form"):
-    ai_name = st.radio("使用するAI", list(AI_OPTIONS), horizontal=True)
+    ai_name = st.radio("使用するAI", ai_router.AI_NAMES, horizontal=True)
+    fallback = st.checkbox(ai_router.FALLBACK_LABEL, value=True)
     topic = st.text_input("テーマ", placeholder="例: リモートワークの生産性を上げる方法")
     keywords = st.text_input("キーワード（カンマ区切り、任意）", placeholder="例: 集中力, ツール, 習慣")
     tone = st.selectbox("トーン", ["カジュアル", "フォーマル", "専門的", "親しみやすい"])
@@ -56,10 +52,14 @@ if submitted:
 見出し（H2/H3相当）を使い、読みやすい構成にしてください。想定読者の年代・性別に合わせて、関心を持ちやすい話題や具体例、言葉づかいを選んでください。導入・本文・まとめの流れで書いてください。"""
         with st.spinner(f"{ai_name} で記事を生成中..."):
             try:
-                result, truncated = AI_OPTIONS[ai_name](prompt)
+                result, truncated, used_ai = ai_router.chat(
+                    ai_name, [{"role": "user", "content": prompt}], fallback
+                )
                 st.session_state["blog_result"] = result
                 st.session_state["blog_truncated"] = truncated
-                st.session_state["blog_ai"] = ai_name
+                st.session_state["blog_ai"] = used_ai
+                if used_ai != ai_name:
+                    st.info("Gemini が混雑していたため、Claude で作成しました。")
             except (RuntimeError, claude_client.ClaudeRefusalError) as e:
                 st.error(str(e))
             except Exception as e:

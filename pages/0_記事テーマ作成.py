@@ -4,7 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from utils import claude_client, gemini_client
+from utils import ai_router, claude_client
 from utils.error_messages import describe_error, error_detail
 from utils.note_theme_prompt import PROFILE_FIELDS, build_prompt
 
@@ -13,10 +13,6 @@ logger = logging.getLogger(__name__)
 # 「私のこと」の入力内容はこのPCだけに保存する（.gitignore で GitHub には上げない）
 PROFILE_PATH = Path(__file__).resolve().parent.parent / "data" / "note_profile.json"
 
-AI_OPTIONS = {
-    "Gemini": gemini_client.chat_with_status,
-    "Claude（Opus 5.5）": claude_client.chat_with_status,
-}
 MORE_IDEAS_REQUEST = "ピンとこないので、別の角度からもう7案出してください。"
 
 st.set_page_config(page_title="記事テーマ作成", page_icon="💡", layout="wide")
@@ -42,7 +38,9 @@ def ask_ai(messages: list[dict]) -> bool:
     history = [{"role": m["role"], "content": m["content"]} for m in messages]
     with st.spinner(f"{ai_name} が考えています..."):
         try:
-            text, truncated = AI_OPTIONS[ai_name](history)
+            text, truncated, used_ai = ai_router.chat(
+                ai_name, history, st.session_state.get("theme_fallback", False)
+            )
         except (RuntimeError, claude_client.ClaudeRefusalError) as e:
             st.error(str(e))
             return False
@@ -51,6 +49,10 @@ def ask_ai(messages: list[dict]) -> bool:
             st.error(f"{ai_name} で回答を作成できませんでした。{describe_error(e)}")
             st.caption(f"エラーの詳細: {error_detail(e)}")
             return False
+    if used_ai != ai_name:
+        # 以降のやりとりも、作成に使った Claude で続ける
+        st.session_state["theme_ai"] = used_ai
+        st.session_state["theme_notice"] = "Gemini が混雑していたため、Claude で作成しました。"
     st.session_state["theme_messages"] = messages + [
         {"role": "assistant", "content": text, "truncated": truncated}
     ]
@@ -59,7 +61,8 @@ def ask_ai(messages: list[dict]) -> bool:
 
 saved = load_profile()
 with st.form("theme_form"):
-    ai_name = st.radio("使用するAI", list(AI_OPTIONS), horizontal=True)
+    ai_name = st.radio("使用するAI", ai_router.AI_NAMES, horizontal=True)
+    fallback = st.checkbox(ai_router.FALLBACK_LABEL, value=True)
     st.markdown("**私のこと**（入力内容はこのPCに保存され、次回も表示されます）")
     profile = {
         key: st.text_area(label, value=saved.get(key, ""), placeholder=example, height=80)
@@ -73,12 +76,15 @@ if submitted:
     else:
         save_profile(profile)
         st.session_state["theme_ai"] = ai_name
+        st.session_state["theme_fallback"] = fallback
         ask_ai([{"role": "user", "content": build_prompt(profile)}])
 
 messages = st.session_state.get("theme_messages", [])
 if messages:
     st.markdown("### 編集者とのやりとり")
     st.caption(f"使用AI: {st.session_state['theme_ai']}")
+    if notice := st.session_state.pop("theme_notice", None):
+        st.info(notice)
     with st.expander("最初に送ったプロンプトを見る"):
         st.text(messages[0]["content"])
     for m in messages[1:]:
