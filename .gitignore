@@ -9,3 +9,4 @@ data/note_profile.json
 data/*.db
 data/*.db-*
 data/note_theme_chat.json
+streamlit.log
