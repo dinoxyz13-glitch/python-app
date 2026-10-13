@@ -6,3 +6,5 @@ venv/
 .agents/
 .claude/
 data/note_profile.json
+data/*.db
+data/*.db-*
