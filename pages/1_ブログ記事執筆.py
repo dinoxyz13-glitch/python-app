@@ -4,6 +4,7 @@ import streamlit as st
 
 from utils import ai_router, claude_client
 from utils.error_messages import describe_error, error_detail
+from utils.options import READER_AGES, TONES
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +16,10 @@ with st.form("blog_form"):
     fallback = st.checkbox(ai_router.FALLBACK_LABEL, value=True)
     topic = st.text_input("テーマ", placeholder="例: リモートワークの生産性を上げる方法")
     keywords = st.text_input("キーワード（カンマ区切り、任意）", placeholder="例: 集中力, ツール, 習慣")
-    tone = st.selectbox("トーン", ["カジュアル", "フォーマル", "専門的", "親しみやすい"])
+    tone = st.selectbox("トーン", TONES)
     col_age, col_gender = st.columns(2)
     with col_age:
-        target_age = st.selectbox(
-            "読者の年代", ["20〜30代", "30〜40代", "40〜50代", "50〜60代", "60〜80代"]
-        )
+        target_age = st.selectbox("読者の年代", READER_AGES)
     with col_gender:
         target_gender = st.selectbox(
             "読者の性別", ["男性向け", "女性向け", "男性女性とも"], index=2
